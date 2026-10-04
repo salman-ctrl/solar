@@ -23,6 +23,7 @@
   .seg button.on { background: var(--accent); color: #05070d; }
   .chip { font-size: 12px; padding: 5px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); color: #cbd5e1; }
   .chip:hover { border-color: var(--accent); color: #fff; }
+  .chip.sel { background: var(--accent); border-color: var(--accent); color: #05070d; font-weight: 600; }
   aside::-webkit-scrollbar { width: 6px; } aside::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 3px; }
 </style>
 </head>
@@ -45,7 +46,7 @@
       <select id="focus" class="bg-transparent text-slate-200 text-sm outline-none">
         <option value="sun" class="bg-slate-900">Tata surya</option>
         <option value="rocket" class="bg-slate-900">Ikuti roket</option>
-        <option value="jupiter" class="bg-slate-900">Ikuti Jupiter</option>
+        <option value="target" class="bg-slate-900">Ikuti planet tujuan</option>
       </select>
     </div>
     <div class="ml-auto flex gap-2 lg:hidden">
@@ -62,15 +63,16 @@
       <p class="text-xs text-slate-500 mt-2">Lintasan roket sama persis di kedua mode. Yang berbeda hanya cara menjelaskannya.</p>
 
       <hr class="border-white/10 my-4">
-      <div class="lbl mb-2">Misi: Bumi ke Jupiter</div>
+      <div class="lbl mb-2">Misi: dari Bumi ke</div>
+      <div id="targets" class="flex flex-wrap gap-2 mb-4"></div>
 
       <div class="mb-3">
         <div class="row"><span>Δv burn di orbit Bumi (LEO)</span><b class="mono accent"><span id="dvVal"></span> km/s</b></div>
         <input id="dv" type="range" min="6.35" max="8.00" step="0.01" value="6.60">
       </div>
       <div class="mb-3">
-        <div class="row"><span>Titik bidik di Jupiter</span><b class="mono accent"><span id="offVal"></span> jt km</b></div>
-        <input id="off" type="range" min="-8" max="8" step="0.01" value="2.00">
+        <div class="row"><span>Titik bidik di <span class="tn"></span></span><b class="mono accent"><span id="offVal"></span> rb km</b></div>
+        <input id="off" type="range" min="-1" max="1" step="0.002" value="0.2">
         <div class="flex justify-between text-[11px] text-slate-500"><span>lewat depan</span><span>lewat belakang</span></div>
       </div>
       <div class="mb-3">
@@ -86,7 +88,7 @@
       <div id="presets" class="flex flex-wrap gap-2"></div>
 
       <hr class="border-white/10 my-4">
-      <div class="lbl mb-2">Flyby dilihat dari Jupiter</div>
+      <div class="lbl mb-2">Flyby dilihat dari <span class="tn"></span></div>
       <canvas id="inset" width="560" height="380" class="w-full rounded-lg bg-black/40 border border-white/10"></canvas>
       <p id="insetNote" class="text-xs text-slate-500 mt-2"></p>
     </aside>
@@ -99,7 +101,7 @@
       <div class="mono">
         <div class="row"><span>Waktu misi</span><b id="tMission"></b></div>
         <div class="row"><span>Jarak ke Matahari</span><b id="tRs"></b></div>
-        <div class="row"><span>Jarak ke Jupiter</span><b id="tRj"></b></div>
+        <div class="row"><span>Jarak ke <span class="tn"></span></span><b id="tRj"></b></div>
         <div class="row"><span>Kecepatan (thd Matahari)</span><b id="tV" class="accent"></b></div>
       </div>
       <canvas id="spark" width="560" height="150" class="w-full mt-2 rounded-lg bg-black/40 border border-white/10"></canvas>
@@ -109,7 +111,7 @@
         <div class="lbl mb-1">Gaya gravitasi pada roket · <span class="normal-case">F = G·M·m / r²</span></div>
         <div class="mono">
           <div class="row"><span style="color:#ffd27a">Matahari</span><b id="fSun"></b></div>
-          <div class="row"><span style="color:#ff9f5a">Jupiter</span><b id="fJup"></b></div>
+          <div class="row"><span style="color:#ff9f5a" class="tn"></span><b id="fJup"></b></div>
         </div>
         <div class="text-[11px] text-slate-500 mt-1">Panjang panah berskala logaritmik.</div>
       </div>
@@ -130,10 +132,10 @@
       <div class="mono">
         <div class="row"><span>Jarak terdekat</span><b id="rPeri"></b></div>
         <div class="row"><span>Sudut belok</span><b id="rTurn"></b></div>
-        <div class="row"><span>Thd Jupiter: masuk / keluar</span><b id="rRel"></b></div>
+        <div class="row"><span>Thd <span class="tn"></span>: masuk / keluar</span><b id="rRel"></b></div>
         <div class="row"><span>Thd Matahari: masuk / keluar</span><b id="rHel"></b></div>
         <div class="row"><span>Kecepatan gratis</span><b id="rGain" class="accent"></b></div>
-        <div class="row"><span>Tujuan akhir</span><b id="rDest" class="text-right"></b></div>
+        <div class="row"><span>Orbit akhir</span><b id="rDest" class="text-right"></b></div>
       </div>
 
       <hr class="border-white/10 my-4">
@@ -154,7 +156,7 @@
       </div>
       <div class="text-[11px] text-slate-500 mt-1">Hasil akhirnya sama, tapi burn saat roket sedang cepat jauh lebih murah.</div>
 
-      <p class="text-[11px] text-slate-600 mt-4 leading-relaxed">Model: Matahari diam di pusat, Jupiter di orbit lingkaran, roket diintegrasi dengan RK4 langkah adaptif di bawah gravitasi keduanya. Ukuran planet dan roket tidak berskala.</p>
+      <p class="text-[11px] text-slate-600 mt-4 leading-relaxed">Model: Matahari diam di pusat, delapan planet di orbit lingkaran sebidang dengan jarak, massa, dan periode asli. Roket diintegrasi dengan RK4 langkah adaptif di bawah gravitasi Matahari dan tujuh planet (Bumi sudah dihitung saat peluncuran). Ukuran planet dan roket tidak berskala.</p>
     </aside>
   </div>
 
@@ -176,16 +178,30 @@
 //<PHYS>
 // ---------- Konstanta fisika (SI) ----------
 const K = {
-  GMs: 1.32712440018e20,   // Matahari
-  GMj: 1.26686534e17,      // Jupiter
-  GMe: 3.986004418e14,     // Bumi
+  GMs: 1.32712440018e20, GMe: 3.986004418e14,
   AU: 1.495978707e11, c: 299792458, g0: 9.80665,
-  RJ: 7.1492e7, Rsun: 6.957e8, rLEO: 6.671e6  // LEO 300 km
+  Rsun: 6.957e8, rLEO: 6.671e6  // LEO 300 km
 };
-K.rE = K.AU; K.rJ = 5.2044 * K.AU;
-K.vE = Math.sqrt(K.GMs / K.rE); K.vJ = Math.sqrt(K.GMs / K.rJ);
-K.wE = K.vE / K.rE; K.wJ = K.vJ / K.rJ;
-K.soi = K.rJ * Math.pow(K.GMj / K.GMs, 0.4);
+// a: jarak ke Matahari (AU), GM (m3/s2), R: radius (m), L: bujur rata-rata J2000 (derajat)
+const PLANETS = [
+  { name: 'Merkurius', a: 0.3871, GM: 2.2032e13,     R: 2.4397e6, L: 252.25, col: 0x9c9085, vr: 0.30 },
+  { name: 'Venus',     a: 0.7233, GM: 3.24859e14,    R: 6.0518e6, L: 181.98, col: 0xe3c07a, vr: 0.42 },
+  { name: 'Bumi',      a: 1.0000, GM: 3.986004418e14,R: 6.371e6,  L: 100.46, col: 0x4a90d9, vr: 0.45 },
+  { name: 'Mars',      a: 1.5237, GM: 4.282837e13,   R: 3.3895e6, L: 355.43, col: 0xc8553a, vr: 0.36 },
+  { name: 'Jupiter',   a: 5.2044, GM: 1.26686534e17, R: 7.1492e7, L: 34.40,  col: 0xd9a066, vr: 1.00 },
+  { name: 'Saturnus',  a: 9.5826, GM: 3.7931187e16,  R: 6.0268e7, L: 49.94,  col: 0xe0c890, vr: 0.85 },
+  { name: 'Uranus',    a: 19.2184,GM: 5.793939e15,   R: 2.5559e7, L: 313.23, col: 0x9fe0e6, vr: 0.60 },
+  { name: 'Neptunus',  a: 30.11,  GM: 6.836529e15,   R: 2.4764e7, L: 304.88, col: 0x4f6fe0, vr: 0.60 }
+];
+const EARTH = 2;
+PLANETS.forEach(p => {
+  p.r = p.a * K.AU; p.v = Math.sqrt(K.GMs / p.r); p.w = p.v / p.r;
+  p.soi = p.r * Math.pow(p.GM / K.GMs, 0.4);
+  p.ph = (p.L - PLANETS[EARTH].L) * Math.PI / 180;      // fase relatif Bumi saat peluncuran
+  // rentang titik bidik: beberapa kali radius tangkap gravitasi
+  p.offRange = 16 * p.R * Math.sqrt(1 + (2 * p.GM / p.R) / Math.pow(0.5 * p.v, 2));
+});
+K.rE = PLANETS[EARTH].r; K.vE = PLANETS[EARTH].v; K.wE = PLANETS[EARTH].w;
 K.vCirc = Math.sqrt(K.GMe / K.rLEO); K.vEsc = Math.SQRT2 * K.vCirc;
 const DAY = 86400, YEAR = 365.25 * DAY;
 
@@ -197,71 +213,85 @@ function vInfFromDv(dv) {
 function dvFromVInf(vInf) { return Math.sqrt(vInf * vInf + K.vEsc * K.vEsc) - K.vCirc; }
 // Persamaan roket Tsiolkovsky -> massa propelan
 function propellant(dv, isp, mDry) { return mDry * (Math.exp(dv / (isp * K.g0)) - 1); }
+// Δv minimum (transfer Hohmann) dari LEO ke orbit planet tujuan
+function hohmannDv(p) { return dvFromVInf(Math.abs(K.vE * (Math.sqrt(2 * p.r / (K.rE + p.r)) - 1))); }
 
-// Kepler: kapan dan di sudut berapa lintasan (tanpa Jupiter) memotong orbit Jupiter
-function keplerCross(vInf) {
-  const rp = K.rE, v = K.vE + vInf;
-  const e = rp * v * v / K.GMs - 1, a = rp / (1 - e), p = rp * (1 + e);
-  if (e < 1 && a * (1 + e) < K.rJ) return null;
-  const nu = Math.acos(Math.max(-1, Math.min(1, (p / K.rJ - 1) / e)));
-  let t;
-  if (e < 1) {
-    const E = 2 * Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(nu / 2));
-    t = (E - e * Math.sin(E)) / Math.sqrt(K.GMs / (a * a * a));
-  } else {
-    const F = 2 * Math.atanh(Math.sqrt((e - 1) / (e + 1)) * Math.tan(nu / 2));
-    t = (e * Math.sinh(F) - F) / Math.sqrt(K.GMs / (-a * a * a));
+const rk4 = (f, t, s, h) => {
+  const add = (k, m) => [s[0] + k[0] * m, s[1] + k[1] * m, s[2] + k[2] * m, s[3] + k[3] * m];
+  const k1 = f(t, s), k2 = f(t + h / 2, add(k1, h / 2)), k3 = f(t + h / 2, add(k2, h / 2)), k4 = f(t + h, add(k3, h));
+  return [0, 1, 2, 3].map(i => s[i] + h / 6 * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]));
+};
+
+// Lintasan tanpa planet tujuan: kapan dan di sudut berapa roket memotong orbit planet tujuan
+function sunCross(v0, rT, f) {
+  const out = rT > K.rE;
+  let s = [K.rE, 0, 0, v0], t = 0, r = K.rE;
+  for (let n = 0; n < 300000 && t < 80 * YEAR; n++) {
+    const h = Math.max(5, Math.min(2 * DAY, 0.01 * Math.sqrt(r * r * r / K.GMs)));
+    const s2 = rk4(f, t, s, h), r2 = Math.hypot(s2[0], s2[1]);
+    if (out ? r2 >= rT : r2 <= rT) {
+      const u = (rT - r) / (r2 - r);
+      return { t: t + u * h, ang: Math.atan2(s[1] + (s2[1] - s[1]) * u, s[0] + (s2[0] - s[0]) * u) };
+    }
+    if (n > 20 && (out ? r2 < r : r2 > r)) return null;   // sudah berbalik sebelum sampai
+    s = s2; r = r2; t += h;
   }
-  return { nu, t };
+  return null;
 }
 
-function simulate(dv, offset) {
+function simulate(dv, offset, ti) {
+  const P = PLANETS[ti], out = P.r > K.rE;
   const vInf = vInfFromDv(dv);
   if (vInf <= 0) return { status: 'bound', vInf };
-  const kc = keplerCross(vInf);
-  if (!kc) return { status: 'short', vInf };
-  const th0 = kc.nu - K.wJ * kc.t + offset / K.rJ;   // fase awal Jupiter
-  const jup = t => { const th = th0 + K.wJ * t; return [K.rJ * Math.cos(th), K.rJ * Math.sin(th), -K.vJ * Math.sin(th), K.vJ * Math.cos(th)]; };
-
-  // Turunan keadaan: gravitasi Matahari + Jupiter
-  const f = (t, s) => {
-    const j = jup(t);
+  const v0 = K.vE + (out ? vInf : -vInf);            // planet dalam: burn melawan arah gerak Bumi
+  const ph = PLANETS.map(p => p.ph);
+  const pos = (i, t) => { const p = PLANETS[i], th = ph[i] + p.w * t; return [p.r * Math.cos(th), p.r * Math.sin(th), -p.v * Math.sin(th), p.v * Math.cos(th)]; };
+  const pull = PLANETS.map((p, i) => i).filter(i => i !== EARTH);
+  // Turunan keadaan: gravitasi Matahari + planet-planet dalam daftar
+  const force = list => (t, s) => {
     const rs2 = s[0] * s[0] + s[1] * s[1], rs3 = rs2 * Math.sqrt(rs2);
-    const dx = s[0] - j[0], dy = s[1] - j[1], rj2 = dx * dx + dy * dy, rj3 = rj2 * Math.sqrt(rj2);
-    return [s[2], s[3], -K.GMs * s[0] / rs3 - K.GMj * dx / rj3, -K.GMs * s[1] / rs3 - K.GMj * dy / rj3];
+    let ax = -K.GMs * s[0] / rs3, ay = -K.GMs * s[1] / rs3;
+    for (const i of list) {
+      const p = PLANETS[i], th = ph[i] + p.w * t;
+      const dx = s[0] - p.r * Math.cos(th), dy = s[1] - p.r * Math.sin(th), d2 = dx * dx + dy * dy, d3 = d2 * Math.sqrt(d2);
+      ax -= p.GM * dx / d3; ay -= p.GM * dy / d3;
+    }
+    return [s[2], s[3], ax, ay];
   };
-  const add = (s, k, h) => [s[0] + k[0] * h, s[1] + k[1] * h, s[2] + k[2] * h, s[3] + k[3] * h];
-  const clockRate = (s, rj) => (K.GMs / Math.hypot(s[0], s[1]) + K.GMj / rj) / (K.c * K.c) + (s[2] * s[2] + s[3] * s[3]) / (2 * K.c * K.c);
+  const kc = sunCross(v0, P.r, force(pull.filter(i => i !== ti)));
+  if (!kc) return { status: 'short', vInf };
+  ph[ti] = kc.ang - P.w * kc.t + offset / P.r;       // fase planet tujuan (jendela peluncuran)
+  const f = force(pull);
+  const clockRate = (s, rj) => (K.GMs / Math.hypot(s[0], s[1]) + P.GM / rj) / (K.c * K.c) + (s[2] * s[2] + s[3] * s[3]) / (2 * K.c * K.c);
 
-  let t = 0, s = [K.rE, 0, 0, K.vE + vInf], lag = 0;
+  let t = 0, s = [K.rE, 0, 0, v0], lag = 0;
   const T = [], X = [], Y = [], VX = [], VY = [], LAG = [];
   const push = () => { T.push(t); X.push(s[0]); Y.push(s[1]); VX.push(s[2]); VY.push(s[3]); LAG.push(lag); };
   push();
-  const tEnd = kc.t + 5 * YEAR;
+  const tEnd = kc.t + Math.max(YEAR, Math.min(12 * YEAR, 1.5 * kc.t));
   let status = 'ok', entry = null, exit = null, ca = { r: Infinity };
   const snap = (i) => {
-    const j = jup(t), rvx = s[2] - j[2], rvy = s[3] - j[3];
+    const j = pos(ti, t), rvx = s[2] - j[2], rvy = s[3] - j[3];
     return { t, i, vh: Math.hypot(s[2], s[3]), vrel: Math.hypot(rvx, rvy), rvx, rvy, jvx: j[2], jvy: j[3] };
   };
-  let j0 = jup(0), rjPrev = Math.hypot(s[0] - j0[0], s[1] - j0[1]);
+  let j0 = pos(ti, 0), rjPrev = Math.hypot(s[0] - j0[0], s[1] - j0[1]);
   for (let n = 0; n < 400000 && t < tEnd; n++) {
     const rs = Math.hypot(s[0], s[1]);
-    // langkah adaptif: sebagian kecil dari skala waktu orbit lokal
-    let h = 0.01 * Math.min(Math.sqrt(rs * rs * rs / K.GMs), Math.sqrt(rjPrev * rjPrev * rjPrev / K.GMj));
-    h = Math.max(5, Math.min(2 * DAY, h));
+    // langkah adaptif: sebagian kecil dari skala waktu orbit lokal terpendek
+    let tau = Math.sqrt(rs * rs * rs / K.GMs);
+    for (const i of pull) { const q = pos(i, t), d = Math.hypot(s[0] - q[0], s[1] - q[1]); tau = Math.min(tau, Math.sqrt(d * d * d / PLANETS[i].GM)); }
+    const h = Math.max(5, Math.min(2 * DAY, 0.01 * tau));
     const r0 = clockRate(s, rjPrev);
-    // Runge-Kutta orde 4
-    const k1 = f(t, s), k2 = f(t + h / 2, add(s, k1, h / 2)), k3 = f(t + h / 2, add(s, k2, h / 2)), k4 = f(t + h, add(s, k3, h));
-    s = [0, 1, 2, 3].map(i => s[i] + h / 6 * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]));
+    s = rk4(f, t, s, h);                              // Runge-Kutta orde 4
     t += h;
-    const j = jup(t), rj = Math.hypot(s[0] - j[0], s[1] - j[1]);
+    const j = pos(ti, t), rj = Math.hypot(s[0] - j[0], s[1] - j[1]);
     lag += h * (r0 + clockRate(s, rj)) / 2;
     push();
     const i = T.length - 1;
-    if (!entry && rj < K.soi) entry = snap(i);
-    if (entry && !exit && rj > K.soi) exit = snap(i);
+    if (!entry && rj < P.soi) entry = snap(i);
+    if (entry && !exit && rj > P.soi) exit = snap(i);
     if (rj < ca.r) ca = Object.assign(snap(i), { r: rj });
-    if (rj < K.RJ) { status = 'crashJ'; break; }
+    if (rj < P.R) { status = 'crashP'; break; }
     if (Math.hypot(s[0], s[1]) < K.Rsun) { status = 'crashSun'; break; }
     rjPrev = rj;
   }
@@ -274,14 +304,14 @@ function simulate(dv, offset) {
     return { E, escape: false, Q: a * (1 + e), q: a * (1 - e) };
   };
   const n = T.length - 1;
-  const before = orbit(K.rE, 0, 0, K.vE + vInf);
+  const before = orbit(K.rE, 0, 0, v0);
   const after = orbit(X[n], Y[n], VX[n], VY[n]);
   // Peluncuran langsung yang memberi energi orbit sama
   const vNeed = Math.sqrt(Math.max(0, 2 * (after.E + K.GMs / K.rE)));
   const dvDirect = dvFromVInf(Math.abs(vNeed - K.vE));
   let turn = null;
   if (entry && exit) turn = Math.acos(Math.max(-1, Math.min(1, (entry.rvx * exit.rvx + entry.rvy * exit.rvy) / (entry.vrel * exit.vrel))));
-  return { status, vInf, th0, T, X, Y, VX, VY, LAG, entry, exit, ca, before, after, dvDirect, turn, dvDeep: (K.vEsc - K.vCirc) + vInf };
+  return { status, ti, P, ph, vInf, T, X, Y, VX, VY, LAG, entry, exit, ca, before, after, dvDirect, turn, dvDeep: (K.vEsc - K.vCirc) + vInf };
 }
 //</PHYS>
 
@@ -311,7 +341,7 @@ controls.enableDamping = true; controls.minDistance = 1.5; controls.maxDistance 
 function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
-scene.add(new THREE.AmbientLight(0x8899bb, 0.35));
+scene.add(new THREE.AmbientLight(0x8899bb, 0.7));
 scene.add(new THREE.PointLight(0xfff1d0, 2.2, 0, 0));
 
 // bintang
@@ -333,11 +363,6 @@ function ring(rAU, color, opacity) {
   const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color, transparent: true, opacity }));
   scene.add(l); return l;
 }
-ring(1, 0x4a90d9, 0.5); ring(5.2044, 0xff9f5a, 0.5);
-[[9.58, 'Orbit Saturnus'], [19.2, 'Orbit Uranus'], [30.05, 'Orbit Neptunus']].forEach(([r, name]) => {
-  ring(r, 0x7c8aa5, 0.22); const l = label(name); l.position.set(0, 2, -r * 10); scene.add(l);
-});
-
 // Matahari
 const sun = new THREE.Mesh(new THREE.SphereGeometry(1.6, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffd98a }));
 scene.add(sun);
@@ -347,18 +372,27 @@ const glow = new THREE.Sprite(new THREE.SpriteMaterial({
 }));
 glow.scale.set(16, 16, 1); scene.add(glow);
 
-// Bumi dan Jupiter
-const earth = new THREE.Mesh(new THREE.SphereGeometry(0.45, 24, 24), new THREE.MeshStandardMaterial({ color: 0x4a90d9, roughness: 0.8 }));
-scene.add(earth);
-const jupTex = canvasTex(256, 128, (g, w, h) => {
-  const bands = ['#c9a27a', '#e6d2b5', '#b98556', '#ead9c0', '#a8683f', '#e2c9a4', '#c08f62', '#ecdcc6', '#b47a4c', '#d9bd98'];
-  bands.forEach((c, i) => { g.fillStyle = c; g.fillRect(0, i * h / bands.length, w, h / bands.length + 1); });
-  g.fillStyle = '#a8492c'; g.beginPath(); g.ellipse(170, 82, 16, 8, 0, 0, 7); g.fill();
+// Delapan planet
+function bandTex(bands, spot) {
+  return canvasTex(256, 128, (g, w, h) => {
+    bands.forEach((c, i) => { g.fillStyle = c; g.fillRect(0, i * h / bands.length, w, h / bands.length + 1); });
+    if (spot) { g.fillStyle = spot; g.beginPath(); g.ellipse(170, 82, 16, 8, 0, 0, 7); g.fill(); }
+  });
+}
+const TEX = {
+  Jupiter: bandTex(['#c9a27a', '#e6d2b5', '#b98556', '#ead9c0', '#a8683f', '#e2c9a4', '#c08f62', '#ecdcc6', '#b47a4c', '#d9bd98'], '#a8492c'),
+  Saturnus: bandTex(['#d8c08a', '#eadbb0', '#cdb27a', '#efe2bd', '#c9ab72', '#e6d5a6', '#d2b983', '#ecdcb4'])
+};
+PLANETS.forEach((p, i) => {
+  p.mesh = new THREE.Mesh(new THREE.SphereGeometry(p.vr, 32, 32), new THREE.MeshStandardMaterial(TEX[p.name] ? { map: TEX[p.name], roughness: 0.9 } : { color: p.col, roughness: 0.85 }));
+  if (p.name === 'Saturnus') {
+    const rg = new THREE.Mesh(new THREE.RingGeometry(p.vr * 1.35, p.vr * 2.2, 64), new THREE.MeshBasicMaterial({ color: 0xd9c79a, side: THREE.DoubleSide, transparent: true, opacity: 0.65 }));
+    rg.rotation.x = -Math.PI / 2 + 0.35; p.mesh.add(rg);
+  }
+  scene.add(p.mesh);
+  p.label = label(p.name, '#' + p.col.toString(16).padStart(6, '0')); scene.add(p.label);
+  p.ring = ring(p.a, p.col, 0.3);
 });
-const jupiter = new THREE.Mesh(new THREE.SphereGeometry(1.0, 32, 32), new THREE.MeshStandardMaterial({ map: jupTex, roughness: 0.9 }));
-scene.add(jupiter);
-const lblJ = label('Jupiter', '#ff9f5a'); scene.add(lblJ);
-const lblE = label('Bumi', '#6fb1f5'); scene.add(lblE);
 
 // Roket
 const rocket = new THREE.Group();
@@ -387,15 +421,15 @@ scene.add(arrowS, arrowJ);
 // Grid ruang-waktu (vertex shader mendeformasi jala di GPU)
 const gridMat = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, side: THREE.DoubleSide, extensions: { derivatives: true },
-  uniforms: { uJup: { value: new THREE.Vector2() }, uRocket: { value: new THREE.Vector2() }, uStrength: { value: 0 }, uCold: { value: new THREE.Color(0x3a4a6a) }, uHot: { value: new THREE.Color(0x4fd8ff) } },
+  uniforms: { uJup: { value: new THREE.Vector2() }, uRocket: { value: new THREE.Vector2() }, uStrength: { value: 0 }, uPd: { value: 6 }, uCold: { value: new THREE.Color(0x3a4a6a) }, uHot: { value: new THREE.Color(0x4fd8ff) } },
   vertexShader: `
-    uniform vec2 uJup; uniform float uStrength;
+    uniform vec2 uJup; uniform float uStrength; uniform float uPd;
     varying vec2 vXZ; varying float vDepth;
     void main() {
       vec3 p = position;
       float dS = length(p.xz), dJ = length(p.xz - uJup);
       // bentuk potensial -GM/r (dihaluskan di pusat, skala visual)
-      float depth = 40.0 / sqrt(dS*dS + 8.0) + 6.0 / sqrt(dJ*dJ + 6.0);
+      float depth = 40.0 / sqrt(dS*dS + 8.0) + uPd / sqrt(dJ*dJ + 6.0);
       vXZ = p.xz; vDepth = depth;
       p.y -= uStrength * depth;
       gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
@@ -412,13 +446,13 @@ const gridMat = new THREE.ShaderMaterial({
     void main() {
       float line = max(grid(vXZ, 10.0), grid(vXZ, 2.5) * 0.35);
       float w = clamp(vDepth / 9.0, 0.0, 1.0) * uStrength;
-      float fade = 1.0 - smoothstep(170.0, 315.0, length(vXZ));
+      float fade = 1.0 - smoothstep(280.0, 440.0, length(vXZ));
       vec2 d = vXZ - uRocket;
       float glow = exp(-dot(d, d) / 30.0) * uStrength;
       gl_FragColor = vec4(mix(uCold, uHot, w) + glow * 0.4, line * (0.2 + 0.6 * w + 0.7 * glow) * fade);
     }`
 });
-const gridGeo = new THREE.PlaneGeometry(640, 640, 400, 400); gridGeo.rotateX(-Math.PI / 2);
+const gridGeo = new THREE.PlaneGeometry(900, 900, 450, 450); gridGeo.rotateX(-Math.PI / 2);
 const grid = new THREE.Mesh(gridGeo, gridMat); grid.frustumCulled = false; grid.position.y = -0.02; scene.add(grid);
 
 // Lintasan
@@ -440,21 +474,45 @@ function buildPath(R) {
 let R = null, simT = 0, playing = true, mode = 'newton', strengthTarget = 0, focusName = 'sun';
 let rel = null;                       // lintasan dalam kerangka Jupiter
 const lastFocus = new THREE.Vector3();
-const BASE = 90;                      // hari simulasi per detik pada 1x
+let BASE = 90;                        // hari simulasi per detik pada 1x
+let target = 4;                       // indeks planet tujuan (Jupiter)
 
 const PRESETS = [
-  { name: 'Lewat belakang (dipercepat)', dv: 6.60, off: 6.00 },
-  { name: 'Lewat depan (diperlambat)', dv: 6.60, off: -5.00 },
-  { name: 'Gaya Voyager (lepas tata surya)', dv: 6.60, off: 2.00 },
-  { name: 'Terlalu dekat', dv: 6.60, off: 0.50 }
+  { name: 'Lewat belakang, jauh', off: 0.55 },
+  { name: 'Lewat belakang, dekat', off: 0.2 },
+  { name: 'Lewat depan, dekat', off: -0.2 },
+  { name: 'Lewat depan, jauh', off: -0.55 },
+  { name: 'Bidik tepat', off: 0 }
 ];
 PRESETS.forEach(p => {
   const b = document.createElement('button'); b.className = 'chip'; b.textContent = p.name;
-  b.onclick = () => { $('dv').value = p.dv; $('off').value = p.off; runSim(); };
+  b.onclick = () => { $('off').value = p.off; runSim(); };
   $('presets').appendChild(b);
 });
 
-const jupAt = t => { const th = R.th0 + K.wJ * t; return [K.rJ * Math.cos(th), K.rJ * Math.sin(th)]; };
+function setTarget(i) {
+  target = i; const P = PLANETS[i];
+  document.querySelectorAll('.tn').forEach(e => e.textContent = P.name);
+  document.querySelectorAll('#targets button').forEach(b => b.classList.toggle('sel', +b.dataset.i === i));
+  const h = Math.ceil((hohmannDv(P) / 1000 + 0.02) * 100) / 100;
+  $('dv').min = h.toFixed(2); $('dv').max = (h + 1.8).toFixed(2); $('dv').value = (h + 0.3).toFixed(2);
+  $('off').value = 0.2;
+  PLANETS.forEach((p, k) => { p.ring.material.opacity = k === i ? 0.75 : k === EARTH ? 0.55 : 0.25; });
+  gridMat.uniforms.uPd.value = clamp(6 * Math.pow(P.GM / 1.26686534e17, 0.3), 0.8, 6);
+  focusName = 'sun'; $('focus').value = 'sun';
+  const d = clamp(Math.max(P.a, 1) * 10 * 2.4, 40, 800);
+  controls.target.set(0, 0, 0); camera.position.set(0, d * 0.67, d * 0.74); lastFocus.set(0, 0, 0);
+  runSim();
+}
+PLANETS.forEach((p, i) => {
+  if (i === EARTH) return;
+  const b = document.createElement('button'); b.className = 'chip'; b.textContent = p.name; b.dataset.i = i;
+  b.onclick = () => setTarget(i);
+  $('targets').appendChild(b);
+});
+
+const planetAt = (i, t) => { const p = PLANETS[i], th = R.ph[i] + p.w * t; return [p.r * Math.cos(th), p.r * Math.sin(th)]; };
+const jupAt = t => planetAt(R.ti, t);
 function stateAt(t) {
   const T = R.T; let lo = 0, hi = T.length - 1;
   t = clamp(t, 0, T[hi]);
@@ -466,25 +524,24 @@ function stateAt(t) {
 
 function destName(o) {
   if (o.escape) return `Lepas dari tata surya (${fmt(o.vInfSolar / 1000, 1)} km/s)`;
-  const Q = o.Q / K.AU;
-  const where = Q >= 30.05 ? 'melewati orbit Neptunus' : Q >= 19.2 ? 'melewati orbit Uranus' : Q >= 9.58 ? 'melewati orbit Saturnus' : Q >= 5.2 ? 'antara Jupiter dan Saturnus' : 'di dalam orbit Jupiter';
-  return `Titik terjauh ${fmt(Q, 1)} AU, ${where}`;
+  if (o.Q / K.AU > 500) return `Nyaris lepas: titik terjauh lebih dari 500 AU`;
+  return `${fmt(o.q / K.AU, 2)} sampai ${fmt(o.Q / K.AU, 2)} AU dari Matahari`;
 }
 
 function runSim() {
-  const dv = +$('dv').value, off = +$('off').value;
-  $('dvVal').textContent = fmt(dv); $('offVal').textContent = (off > 0 ? '+' : '') + fmt(off);
-  R = simulate(dv * 1000, off * 1e9);
+  const P = PLANETS[target], dv = +$('dv').value, off = +$('off').value * P.offRange;
+  $('dvVal').textContent = fmt(dv); $('offVal').textContent = (off > 0 ? '+' : '') + fmt(off / 1e6, 0);
+  R = simulate(dv * 1000, off, target);
   const banner = $('banner'); banner.classList.add('hidden');
-  if (!R.T) { banner.textContent = 'Δv terlalu kecil: roket tidak sampai ke orbit Jupiter.'; banner.classList.remove('hidden'); return; }
-  if (R.status === 'crashJ') { banner.textContent = 'Roket menabrak Jupiter. Geser titik bidik menjauh.'; banner.classList.remove('hidden'); }
+  if (!R.T) { banner.textContent = `Δv terlalu kecil: roket tidak sampai ke orbit ${P.name}.`; banner.classList.remove('hidden'); return; }
+  if (R.status === 'crashP') { banner.textContent = `Roket menabrak ${P.name}. Geser titik bidik menjauh.`; banner.classList.remove('hidden'); }
   if (R.status === 'crashSun') { banner.textContent = 'Roket jatuh ke Matahari.'; banner.classList.remove('hidden'); }
   buildPath(R);
 
   // lintasan relatif terhadap Jupiter untuk jendela inset
   rel = null;
   if (R.entry) {
-    const W = clamp(3 * R.ca.r, 12 * K.RJ, 400 * K.RJ), xs = [], ys = [], ts = [];
+    const W = clamp(3 * R.ca.r, 12 * P.R, 400 * P.R), xs = [], ys = [], ts = [];
     const i0 = R.entry.i, i1 = R.exit ? R.exit.i : R.T.length - 1;
     for (let i = i0; i <= i1; i++) { const j = jupAt(R.T[i]); const dx = R.X[i] - j[0], dy = R.Y[i] - j[1]; if (Math.abs(dx) < W * 1.6 && Math.abs(dy) < W * 1.2) { xs.push(dx); ys.push(dy); ts.push(R.T[i]); } }
     rel = { W, xs, ys, ts };
@@ -492,18 +549,19 @@ function runSim() {
 
   // hasil slingshot
   const e = R.entry, x = R.exit;
-  $('rPeri').textContent = e ? `${fmt(R.ca.r / K.RJ, 1)} RJ (${fmt(R.ca.r / 1e6, 0)} rb km)` : 'tidak ada flyby';
+  $('rPeri').textContent = e ? `${fmt(R.ca.r / P.R, 1)} radius (${fmt(R.ca.r / 1e6, 0)} rb km)` : 'tidak ada flyby';
   $('rTurn').textContent = R.turn != null ? `${fmt(R.turn * 180 / Math.PI, 1)}°` : '-';
   $('rRel').textContent = e && x ? `${fmt(e.vrel / 1000)} / ${fmt(x.vrel / 1000)} km/s` : '-';
   $('rHel').textContent = e && x ? `${fmt(e.vh / 1000)} / ${fmt(x.vh / 1000)} km/s` : '-';
   $('rGain').textContent = e && x ? `${x.vh >= e.vh ? '+' : ''}${fmt((x.vh - e.vh) / 1000)} km/s` : '-';
   $('rDest').textContent = R.status === 'ok' ? destName(R.after) : '-';
   $('insetNote').textContent = e && x
-    ? `Dari sudut pandang Jupiter, roket masuk dan keluar dengan laju yang hampir sama (${fmt(e.vrel / 1000)} dan ${fmt(x.vrel / 1000)} km/s), hanya arahnya berbelok. Tambahan kecepatan terhadap Matahari datang dari gerak orbit Jupiter (${fmt(K.vJ / 1000, 1)} km/s).`
-    : 'Roket tidak masuk wilayah pengaruh gravitasi Jupiter.';
+    ? `Dari sudut pandang ${P.name}, roket masuk dan keluar dengan laju yang hampir sama (${fmt(e.vrel / 1000)} dan ${fmt(x.vrel / 1000)} km/s), hanya arahnya berbelok. Perubahan kecepatan terhadap Matahari datang dari gerak orbit ${P.name} (${fmt(P.v / 1000, 1)} km/s).`
+    : `Roket tidak masuk wilayah pengaruh gravitasi ${P.name}.`;
   $('obLow').textContent = `${fmt(dv)} km/s`;
   $('obHigh').textContent = `${fmt(R.dvDeep / 1000)} km/s`;
   updateFuel(); drawSpark();
+  BASE = R.T[R.T.length - 1] / DAY / 40;   // seluruh misi sekitar 40 detik pada 1x
   simT = 0; playing = true; $('play').textContent = 'Jeda';
 }
 
@@ -521,7 +579,7 @@ function updateFuel() {
   const el = $('fuelSave');
   if (R.status !== 'ok') el.textContent = '';
   else if (b > a) el.innerHTML = `Slingshot menghemat <b class="accent">${fmt((b - a) / 1000, 2)} ton</b> propelan (${fmt((1 - a / b) * 100, 0)}%).`;
-  else el.innerHTML = `Flyby ini justru <b class="text-red-300">membuang energi</b>: roket diperlambat Jupiter.`;
+  else el.innerHTML = `Flyby ini <b class="text-red-300">tidak menguntungkan</b>: peluncuran langsung ke orbit akhir yang sama lebih murah.`;
 }
 
 // grafik kecepatan (digambar sekali per simulasi)
@@ -547,7 +605,7 @@ function paintInset(st) {
   if (!rel) { g.fillText('Tidak ada flyby', 20, 40); return; }
   const k = (H / 2) / rel.W, px = x => W / 2 + x * k, py = y => H / 2 - y * k;
   // Jupiter berskala benar di jendela ini
-  g.fillStyle = '#c9905c'; g.beginPath(); g.arc(W / 2, H / 2, Math.max(3, K.RJ * k), 0, 7); g.fill();
+  g.fillStyle = '#' + R.P.col.toString(16).padStart(6, '0'); g.beginPath(); g.arc(W / 2, H / 2, Math.max(3, R.P.R * k), 0, 7); g.fill();
   const draw = (upTo, style, lw) => { g.strokeStyle = style; g.lineWidth = lw; g.beginPath(); let started = false; for (let i = 0; i < rel.xs.length && rel.ts[i] <= upTo; i++) { const X = px(rel.xs[i]), Y = py(rel.ys[i]); started ? g.lineTo(X, Y) : g.moveTo(X, Y); started = true; } g.stroke(); };
   draw(Infinity, 'rgba(255,255,255,.3)', 2); draw(simT, '#f5a524', 3);
   const dx = st.x - st.jx, dy = st.y - st.jy;
@@ -556,13 +614,13 @@ function paintInset(st) {
   const n = Math.hypot(R.ca.jvx, R.ca.jvy), ux = R.ca.jvx / n, uy = R.ca.jvy / n, ax = 60, ay = H - 50;
   g.strokeStyle = '#ff9f5a'; g.fillStyle = '#ff9f5a'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(ax, ay); g.lineTo(ax + ux * 40, ay - uy * 40); g.stroke();
   g.beginPath(); g.arc(ax + ux * 40, ay - uy * 40, 4, 0, 7); g.fill();
-  g.fillStyle = '#7c8aa5'; g.fillText('arah gerak Jupiter', 20, H - 14);
-  g.fillText(`lebar jendela ${fmt(rel.W * 2 * (W / H) / K.RJ, 0)} RJ`, 20, 28);
+  g.fillStyle = '#7c8aa5'; g.fillText('arah gerak ' + R.P.name, 20, H - 14);
+  g.fillText(`lebar jendela ${fmt(rel.W * 2 * (W / H) / 1e6, 0)} rb km`, 20, 28);
 }
 
 // ---------- Mode ----------
 const MODE_TEXT = {
-  newton: 'Gravitasi adalah <b>gaya tarik</b>. Matahari dan Jupiter menarik roket dengan gaya yang makin besar ketika jaraknya makin dekat. Ruang hanyalah panggung datar yang diam.',
+  newton: 'Gravitasi adalah <b>gaya tarik</b>. Matahari dan planet menarik roket dengan gaya yang makin besar ketika jaraknya makin dekat. Ruang hanyalah panggung datar yang diam.',
   einstein: 'Tidak ada gaya. Massa <b>melengkungkan ruang-waktu</b>, dan roket hanya bergerak selurus mungkin (geodesik) di geometri yang melengkung itu. Makin dalam di sumur, makin lambat jamnya berdetak.'
 };
 function setMode(m) {
@@ -576,10 +634,10 @@ function setMode(m) {
 }
 $('btnNewton').onclick = () => setMode('newton'); $('btnEinstein').onclick = () => setMode('einstein');
 
-function focusPos() { return focusName === 'rocket' ? rocket.position : focusName === 'jupiter' ? jupiter.position : sun.position; }
+function focusPos() { return focusName === 'rocket' ? rocket.position : focusName === 'target' ? PLANETS[target].mesh.position : sun.position; }
 $('focus').onchange = (ev) => {
   focusName = ev.target.value;
-  const off = camera.position.clone().sub(controls.target); off.setLength(focusName === 'sun' ? 140 : 16);
+  const off = camera.position.clone().sub(controls.target); off.setLength(focusName === 'sun' ? clamp(Math.max(PLANETS[target].a, 1) * 24, 40, 800) : 16);
   const fp = focusPos(); controls.target.copy(fp); camera.position.copy(fp).add(off); lastFocus.copy(fp);
 };
 
@@ -601,7 +659,7 @@ function frame(now) {
     let st = stateAt(simT);
     if (playing) {
       // waktu otomatis melambat di dekat Jupiter supaya flyby terlihat
-      const warp = BASE * +$('speed').value * clamp((st.rj / K.soi) ** 2, 0.002, 1);
+      const warp = BASE * +$('speed').value * clamp((st.rj / R.P.soi) ** 2, 0.002, 1);
       simT += dt * warp * DAY;
       $('warp').textContent = warp >= 1 ? `${fmt(warp, 0)} hari/dtk` : `${fmt(warp * 24, 1)} jam/dtk`;
       if (simT >= tMax) { simT = tMax; playing = false; $('play').textContent = 'Putar'; }
@@ -609,30 +667,37 @@ function frame(now) {
       st = stateAt(simT);
     }
     // posisi benda
-    jupiter.position.copy(V3(st.jx, st.jy)); jupiter.rotation.y += dt * 0.4;
-    earth.position.copy(V3(K.rE * Math.cos(K.wE * simT), K.rE * Math.sin(K.wE * simT)));
-    lblJ.position.copy(jupiter.position).y += 1.8; lblE.position.copy(earth.position).y += 1.2;
+    PLANETS.forEach((p, i) => {
+      const q = planetAt(i, simT); p.mesh.position.copy(V3(q[0], q[1])); p.mesh.rotation.y += dt * 0.4;
+      // ukuran minimum di layar supaya planet tetap terlihat dari jauh
+      const sc = Math.max(1, camera.position.distanceTo(p.mesh.position) * 0.007 / p.vr); p.mesh.scale.setScalar(sc);
+      p.label.position.copy(p.mesh.position).y += p.vr * sc * 1.9;
+      // label planet yang terlalu rapat di tengah disembunyikan saat kamera jauh
+      p.label.visible = i === R.ti || camera.position.distanceTo(p.mesh.position) < p.a * 10 * 18;
+    });
+    const jupiter = R.P.mesh;
+    sun.scale.setScalar(Math.max(1, camera.position.length() * 0.006));
     rocket.position.copy(V3(st.x, st.y));
     tmp.set(st.vx, 0, -st.vy).normalize(); rocket.quaternion.setFromUnitVectors(UP, tmp);
     const rsc = clamp(camera.position.distanceTo(rocket.position) * 0.022, 0.3, 5); rocket.scale.setScalar(rsc);
     pathDone.geometry.setDrawRange(0, st.i + 2);
 
     // gaya Newton: a = GM / r^2
-    const aS = K.GMs / (st.rs * st.rs), aJ = K.GMj / (st.rj * st.rj), m = +$('mdry').value;
+    const aS = K.GMs / (st.rs * st.rs), aJ = R.P.GM / (st.rj * st.rj), m = +$('mdry').value;
     if (mode === 'newton') {
       const len = a => clamp(2 + 1.3 * (Math.log10(a) + 7), 0.6, 14) * rsc * 0.6;
       arrowS.position.copy(rocket.position); arrowS.setDirection(tmp.copy(sun.position).sub(rocket.position).normalize()); arrowS.setLength(len(aS), rsc * 0.5, rsc * 0.25);
       arrowJ.position.copy(rocket.position); arrowJ.setDirection(tmp.copy(jupiter.position).sub(rocket.position).normalize()); arrowJ.setLength(len(aJ), rsc * 0.5, rsc * 0.25);
       $('fSun').textContent = `${fmt(aS * m, 2)} N`; $('fJup').textContent = aJ * m >= 0.01 ? `${fmt(aJ * m, 2)} N` : `${(aJ * m).toExponential(1)} N`;
     } else {
-      const rate = (K.GMs / st.rs + K.GMj / st.rj) / (K.c * K.c) + st.v * st.v / (2 * K.c * K.c);
+      const rate = (K.GMs / st.rs + R.P.GM / st.rj) / (K.c * K.c) + st.v * st.v / (2 * K.c * K.c);
       $('cFar').textContent = fmtClock(simT); $('cRocket').textContent = fmtClock(simT - st.lag);
       $('cLag').textContent = `${fmt(st.lag * 1000, 1)} ms`; $('cRate').textContent = `${fmt(rate * 1e9, 1)} ns per detik`;
     }
     // telemetri
-    $('tMission').textContent = `${fmt(simT / DAY, 1)} hari`;
+    $('tMission').textContent = simT > 2 * YEAR ? `${fmt(simT / YEAR, 2)} tahun` : `${fmt(simT / DAY, 1)} hari`;
     $('tRs').textContent = `${fmt(st.rs / K.AU, 3)} AU`;
-    $('tRj').textContent = st.rj < 400 * K.RJ ? `${fmt(st.rj / K.RJ, 1)} RJ` : `${fmt(st.rj / 1e9, 1)} jt km`;
+    $('tRj').textContent = st.rj < 400 * R.P.R ? `${fmt(st.rj / 1e6, 0)} rb km` : `${fmt(st.rj / 1e9, 1)} jt km`;
     $('tV').textContent = `${fmt(st.v / 1000)} km/s`;
     gridMat.uniforms.uJup.value.set(jupiter.position.x, jupiter.position.z);
     gridMat.uniforms.uRocket.value.set(rocket.position.x, rocket.position.z);
@@ -645,7 +710,7 @@ function frame(now) {
   renderer.render(scene, camera);
 }
 
-setMode('newton'); runSim(); updateFuel();
+setMode('newton'); setTarget(4); updateFuel();
 requestAnimationFrame(frame);
 </script>
 </body>
